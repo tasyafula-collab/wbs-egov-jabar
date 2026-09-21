@@ -1,90 +1,143 @@
-import React, { useState } from 'react';
-import { FileText, Search } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, Search, Edit3, Trash2, X, Save } from 'lucide-react';
+import { toast } from 'react-toastify'; // Import library toast
 
 export default function ProjectPage() {
-  const [activeTab, setActiveTab] = useState('daftar');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [projects, setProjects] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   
-  const [formData, setFormData] = useState({
-    namaProject: '',
-    pic: '',
-    divisi: '',
+  // State untuk mengontrol tampilan: 'list' (Daftar Project) atau 'add' (Form Tambah Project)
+  const [currentView, setCurrentView] = useState('list');
+
+  // State untuk Modal Edit
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentProject, setCurrentProject] = useState(null);
+
+  // State untuk Form Tambah Project Baru (Divisi otomatis 'E-Government')
+  const [newProject, setNewProject] = useState({
+    name: '',
+    pic: 'Rudi Hartono',
+    divisi: 'E-Government',
     prioritas: 'Sedang',
     tanggalMulai: '',
     tanggalSelesai: '',
-    anggaran: ''
+    anggaran: '',
+    status: 'On Track',
+    progress: 0
   });
 
-  const [projects, setProjects] = useState([
-    { name: 'Sistem Informasi Pelayanan Publik', pic: 'Rudi Hartono', divisi: 'e-Gov', prioritas: 'Tinggi', status: 'On Track', progress: 75, date: '2026-06-30' },
-    { name: 'Portal Data Terpadu Jabar', pic: 'Siti Rahayu', divisi: 'Data Center', prioritas: 'Tinggi', status: 'At Risk', progress: 40, date: '2026-09-30' },
-    { name: 'Aplikasi Pelaporan Desa Digital', pic: 'Dani Setiawan', divisi: 'e-Gov', prioritas: 'Sedang', status: 'On Track', progress: 90, date: '2026-04-30' },
-    { name: 'Integrasi SIPD & SIMPEG', pic: 'Maya Putri', divisi: 'Infrastruktur', prioritas: 'Tinggi', status: 'Delayed', progress: 20, date: '2026-12-31' },
-    { name: 'Dashboard Monitoring RT/RW', pic: 'Rudi Hartono', divisi: 'e-Gov', prioritas: 'Rendah', status: 'On Track', progress: 55, date: '2026-10-31' },
-    { name: 'Sistem Absensi Digital ASN', pic: 'Siti Rahayu', divisi: 'SDM Digital', prioritas: 'Sedang', status: 'On Track', progress: 68, date: '2026-07-20' },
-  ]);
+  useEffect(() => {
+    fetchProjects();
+  }, []);
 
-  const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const fetchProjects = () => {
+    fetch('http://localhost:5000/api/projects')
+      .then((res) => res.json())
+      .then((data) => setProjects(data))
+      .catch((err) => console.error('Gagal mengambil data project:', err));
   };
 
-  const handleSubmit = (e) => {
+  // Fungsi Submit Tambah Project dengan Toast Asik
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.namaProject || !formData.pic) return;
+    try {
+      const response = await fetch('http://localhost:5000/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newProject),
+      });
 
-    const newProj = {
-      name: formData.namaProject,
-      pic: formData.pic,
-      divisi: formData.divisi || 'e-Gov',
-      prioritas: formData.prioritas,
-      status: 'On Track',
-      progress: 0,
-      date: formData.tanggalSelesai || '2026-12-31'
-    };
+      if (response.ok) {
+        // Notifikasi sukses di pojok kanan bawah ✨
+        toast.success('Yeay! Project e-Gov baru berhasil ditambahkan! 🎉');
 
-    setProjects([newProj, ...projects]);
-    setActiveTab('daftar');
-    setFormData({
-      namaProject: '',
-      pic: '',
-      divisi: '',
-      prioritas: 'Sedang',
-      tanggalMulai: '',
-      tanggalSelesai: '',
-      anggaran: ''
+        setNewProject({
+          name: '',
+          pic: 'Rudi Hartono',
+          divisi: 'E-Government',
+          prioritas: 'Sedang',
+          tanggalMulai: '',
+          tanggalSelesai: '',
+          anggaran: '',
+          status: 'On Track',
+          progress: 0
+        });
+        setCurrentView('list');
+        fetchProjects();
+      } else {
+        toast.error('Waduh, gagal menambahkan project!');
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      toast.error('Terjadi kesalahan pada server.');
+    }
+  };
+
+  // Fungsi Hapus Project dengan Toast
+  const handleDelete = async (id) => {
+    if (window.confirm('Apakah Anda yakin ingin menghapus project ini?')) {
+      try {
+        const response = await fetch(`http://localhost:5000/api/projects/${id}`, {
+          method: 'DELETE',
+        });
+        if (response.ok) {
+          toast.info('Project berhasil dihapus dari sistem.');
+          fetchProjects();
+        } else {
+          toast.error('Gagal menghapus project.');
+        }
+      } catch (err) {
+        console.error('Error:', err);
+      }
+    }
+  };
+
+  // Buka Modal Edit
+  const handleEditClick = (proj) => {
+    setCurrentProject({
+      ...proj,
+      tanggalMulai: proj.tanggalMulai ? proj.tanggalMulai.split('T')[0] : '',
+      tanggalSelesai: proj.tanggalSelesai ? proj.tanggalSelesai.split('T')[0] : '',
+      pic: proj.pic || 'Rudi Hartono',
+      divisi: 'E-Government', // Selalu set ke E-Government
+      prioritas: proj.prioritas || 'Sedang',
+      anggaran: proj.anggaran || '',
+      status: proj.status || 'On Track'
     });
+    setIsEditing(true);
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'On Track':
-        return <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">On Track</span>;
-      case 'At Risk':
-        return <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">At Risk</span>;
-      case 'Delayed':
-        return <span className="px-3 py-1 bg-rose-100 text-rose-700 rounded-full text-xs font-medium">Delayed</span>;
-      default:
-        return null;
+  // Simpan Perubahan Edit dengan Toast
+  const handleUpdateSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`http://localhost:5000/api/projects/${currentProject.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(currentProject),
+      });
+
+      if (response.ok) {
+        toast.success('Perubahan project berhasil disimpan! ✨');
+        setIsEditing(false);
+        fetchProjects();
+      } else {
+        toast.error('Gagal memperbarui project.');
+      }
+    } catch (err) {
+      console.error('Error:', err);
     }
   };
 
-  const getProgressBarColor = (status) => {
-    switch (status) {
-      case 'On Track': return 'bg-emerald-500';
-      case 'At Risk': return 'bg-amber-400';
-      case 'Delayed': return 'bg-rose-500';
-      default: return 'bg-blue-500';
-    }
-  };
-
+  // Filter pencarian berdasarkan nama project atau PIC
   const filteredProjects = projects.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    p.pic.toLowerCase().includes(searchTerm.toLowerCase())
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (p.pic && p.pic.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
     <div className="space-y-6">
-      {/* Title & Navigation Tabs */}
+      {/* Header Halaman & Tombol Toggle View */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2">
@@ -94,188 +147,376 @@ export default function ProjectPage() {
           <p className="text-sm text-gray-500 mt-0.5">Kelola dan tambahkan project WBS divisi e-Gov</p>
         </div>
         
-        <div className="flex items-center space-x-2 bg-gray-100 p-1 rounded-xl">
+        {/* Tombol Tab Atas */}
+        <div className="flex items-center space-x-1 bg-gray-100 p-1 rounded-xl">
           <button 
-            onClick={() => setActiveTab('daftar')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'daftar' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+            onClick={() => setCurrentView('list')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              currentView === 'list' 
+                ? 'bg-white text-gray-900 shadow-sm' 
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
           >
             Daftar Project
           </button>
           <button 
-            onClick={() => setActiveTab('tambah')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'tambah' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+            onClick={() => setCurrentView('add')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              currentView === 'add' 
+                ? 'bg-blue-600 text-white shadow-sm' 
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
           >
             Tambah Project
           </button>
         </div>
       </div>
 
-      {activeTab === 'daftar' ? (
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden space-y-4">
-          <div className="px-6 py-4 border-b flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h3 className="font-bold text-gray-800 text-base">Daftar Project Aktif</h3>
-            <div className="relative">
+      {/* KONDISI TAMPILAN */}
+      {currentView === 'list' ? (
+        /* ================= TABEL DAFTAR PROJECT ================= */
+        <div className="bg-white rounded-xl shadow-sm border p-6 space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4">
+            <h3 className="font-bold text-gray-900 text-base">Daftar Project Aktif (Database MySQL)</h3>
+            
+            <div className="relative w-full md:w-72">
               <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
               <input 
                 type="text" 
                 placeholder="Cari project atau PIC..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-white border rounded-lg pl-9 pr-4 py-2 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-gray-50 border rounded-lg pl-9 pr-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b text-[11px] font-semibold text-gray-400 uppercase tracking-wider bg-gray-50/50">
-                  <th className="py-3 px-6">Nama Project</th>
-                  <th className="py-3 px-6">PIC</th>
-                  <th className="py-3 px-6">Divisi</th>
-                  <th className="py-3 px-6">Status</th>
-                  <th className="py-3 px-6">Progress</th>
-                  <th className="py-3 px-6 text-right">Selesai</th>
+                <tr className="border-b text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  <th className="py-3 px-4">Nama Project</th>
+                  <th className="py-3 px-4">PIC</th>
+                  <th className="py-3 px-4">Divisi</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Progress</th>
+                  <th className="py-3 px-4">Selesai</th>
+                  <th className="py-3 px-4 text-center">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y text-sm text-gray-600">
-                {filteredProjects.map((project, index) => (
-                  <tr key={index} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="py-4 px-6 font-semibold text-gray-900">{project.name}</td>
-                    <td className="py-4 px-6 text-gray-600">{project.pic}</td>
-                    <td className="py-4 px-6 text-gray-600">{project.divisi}</td>
-                    <td className="py-4 px-6">{getStatusBadge(project.status)}</td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-24 bg-gray-100 rounded-full h-2 overflow-hidden">
-                          <div 
-                            className={`h-2 rounded-full ${getProgressBarColor(project.status)}`} 
-                            style={{ width: `${project.progress}%` }}
-                          ></div>
+              <tbody className="divide-y text-sm text-gray-700">
+                {filteredProjects.length > 0 ? (
+                  filteredProjects.map((proj, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                      <td className="py-4 px-4 font-semibold text-gray-900">{proj.name}</td>
+                      <td className="py-4 px-4">{proj.pic || '-'}</td>
+                      <td className="py-4 px-4 text-gray-500">{proj.divisi || 'E-Government'}</td>
+                      <td className="py-4 px-4">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                          proj.status === 'At Risk' ? 'bg-amber-100 text-amber-700' : 
+                          proj.status === 'Delayed' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
+                        }`}>
+                          {proj.status || 'On Track'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-20 bg-gray-100 rounded-full h-2 overflow-hidden">
+                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${proj.progress || 0}%` }}></div>
+                          </div>
+                          <span className="text-xs font-medium text-gray-600">{proj.progress || 0}%</span>
                         </div>
-                        <span className="text-xs font-medium text-gray-500 w-8">{project.progress}%</span>
-                      </div>
+                      </td>
+                      <td className="py-4 px-4 text-xs text-gray-500">
+                        {proj.tanggalSelesai ? proj.tanggalSelesai.split('T')[0] : '-'}
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <div className="flex items-center justify-center space-x-2">
+                          {/* Tombol Edit */}
+                          <button 
+                            onClick={() => handleEditClick(proj)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit Project"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          {/* Tombol Hapus */}
+                          <button 
+                            onClick={() => handleDelete(proj.id)}
+                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                            title="Hapus Project"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="py-8 text-center text-gray-400">
+                      Tidak ada project ditemukan.
                     </td>
-                    <td className="py-4 px-6 text-right font-mono text-xs text-gray-500">{project.date}</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border p-6 md:p-8 space-y-6">
+        /* ================= FORM INPUT PROJECT BARU ================= */
+        <div className="bg-white rounded-xl shadow-sm border p-8 space-y-6">
           <div>
             <h3 className="font-bold text-gray-900 text-lg">Form Input Project Baru</h3>
-            <p className="text-xs text-gray-400 mt-0.5">Lengkapi form di bawah untuk mendaftarkan project baru</p>
+            <p className="text-sm text-gray-500">Lengkapi form di bawah untuk mendaftarkan project baru</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleAddSubmit} className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-gray-700">Nama Project *</label>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Nama Project *</label>
                 <input 
                   type="text" 
-                  name="namaProject"
                   required
-                  placeholder="Nama project..." 
-                  value={formData.namaProject}
-                  onChange={handleInputChange}
-                  className="w-full bg-white border rounded-lg px-4 py-2.5 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Nama project..."
+                  value={newProject.name}
+                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-gray-700">PIC (Person In Charge) *</label>
-                <input 
-                  type="text" 
-                  name="pic"
-                  required
-                  placeholder="Nama PIC..." 
-                  value={formData.pic}
-                  onChange={handleInputChange}
-                  className="w-full bg-white border rounded-lg px-4 py-2.5 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-gray-700">Divisi</label>
-                <input 
-                  type="text" 
-                  name="divisi"
-                  placeholder="Divisi..." 
-                  value={formData.divisi}
-                  onChange={handleInputChange}
-                  className="w-full bg-white border rounded-lg px-4 py-2.5 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-gray-700">Prioritas</label>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">PIC (Person In Charge) *</label>
                 <select 
-                  name="prioritas"
-                  value={formData.prioritas}
-                  onChange={handleInputChange}
-                  className="w-full bg-white border rounded-lg px-4 py-2.5 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={newProject.pic}
+                  onChange={(e) => setNewProject({ ...newProject, pic: e.target.value })}
+                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="Tinggi">Tinggi</option>
-                  <option value="Sedang">Sedang</option>
-                  <option value="Rendah">Rendah</option>
+                  <option value="Rudi Hartono">Rudi Hartono</option>
+                  <option value="Siti Rahayu">Siti Rahayu</option>
+                  <option value="Dani Setiawan">Dani Setiawan</option>
                 </select>
               </div>
+            </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-gray-700">Tanggal Mulai *</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Divisi Fixed E-Government */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Divisi</label>
                 <input 
-                  type="date" 
-                  name="tanggalMulai"
-                  required
-                  value={formData.tanggalMulai}
-                  onChange={handleInputChange}
-                  className="w-full bg-white border rounded-lg px-4 py-2.5 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  type="text" 
+                  disabled
+                  value="E-Government"
+                  className="w-full bg-gray-100 border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-600 cursor-not-allowed"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-gray-700">Tanggal Selesai *</label>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Prioritas</label>
+                <select 
+                  value={newProject.prioritas}
+                  onChange={(e) => setNewProject({ ...newProject, prioritas: e.target.value })}
+                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="Rendah">Rendah</option>
+                  <option value="Sedang">Sedang</option>
+                  <option value="Tinggi">Tinggi</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tanggal Mulai *</label>
                 <input 
                   type="date" 
-                  name="tanggalSelesai"
                   required
-                  value={formData.tanggalSelesai}
-                  onChange={handleInputChange}
-                  className="w-full bg-white border rounded-lg px-4 py-2.5 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={newProject.tanggalMulai}
+                  onChange={(e) => setNewProject({ ...newProject, tanggalMulai: e.target.value })}
+                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tanggal Selesai *</label>
+                <input 
+                  type="date" 
+                  required
+                  value={newProject.tanggalSelesai}
+                  onChange={(e) => setNewProject({ ...newProject, tanggalSelesai: e.target.value })}
+                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-gray-700">Anggaran</label>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Anggaran</label>
               <input 
                 type="text" 
-                name="anggaran"
-                placeholder="Rp ..." 
-                value={formData.anggaran}
-                onChange={handleInputChange}
-                className="w-full bg-white border rounded-lg px-4 py-2.5 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Rp ..."
+                value={newProject.anggaran}
+                onChange={(e) => setNewProject({ ...newProject, anggaran: e.target.value })}
+                className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div className="flex items-center space-x-3 pt-4 border-t">
               <button 
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium shadow-sm transition-colors"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-semibold shadow-sm transition-colors"
               >
                 Simpan Project
               </button>
               <button 
                 type="button"
-                onClick={() => setActiveTab('daftar')}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                onClick={() => setCurrentView('list')}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors"
               >
                 Batal
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* MODAL EDIT PROJECT */}
+      {isEditing && currentProject && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
+              <div>
+                <h3 className="font-bold text-gray-900 text-lg">Edit Project</h3>
+                <p className="text-xs text-gray-500">Perbarui informasi project di bawah ini</p>
+              </div>
+              <button 
+                onClick={() => setIsEditing(false)}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateSubmit} className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Nama Project *</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={currentProject.name}
+                    onChange={(e) => setCurrentProject({ ...currentProject, name: e.target.value })}
+                    className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">PIC (Person In Charge) *</label>
+                  <select 
+                    value={currentProject.pic}
+                    onChange={(e) => setCurrentProject({ ...currentProject, pic: e.target.value })}
+                    className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="Rudi Hartono">Rudi Hartono</option>
+                    <option value="Siti Rahayu">Siti Rahayu</option>
+                    <option value="Dani Setiawan">Dani Setiawan</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Divisi Fixed E-Government */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Divisi</label>
+                  <input 
+                    type="text" 
+                    disabled
+                    value="E-Government"
+                    className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-600 cursor-not-allowed"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Prioritas</label>
+                  <select 
+                    value={currentProject.prioritas}
+                    onChange={(e) => setCurrentProject({ ...currentProject, prioritas: e.target.value })}
+                    className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="Rendah">Rendah</option>
+                    <option value="Sedang">Sedang</option>
+                    <option value="Tinggi">Tinggi</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Tanggal Mulai *</label>
+                  <input 
+                    type="date" 
+                    required
+                    value={currentProject.tanggalMulai}
+                    onChange={(e) => setCurrentProject({ ...currentProject, tanggalMulai: e.target.value })}
+                    className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Tanggal Selesai *</label>
+                  <input 
+                    type="date" 
+                    required
+                    value={currentProject.tanggalSelesai}
+                    onChange={(e) => setCurrentProject({ ...currentProject, tanggalSelesai: e.target.value })}
+                    className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Anggaran</label>
+                  <input 
+                    type="text" 
+                    placeholder="Rp ..."
+                    value={currentProject.anggaran}
+                    onChange={(e) => setCurrentProject({ ...currentProject, anggaran: e.target.value })}
+                    className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Status</label>
+                  <select 
+                    value={currentProject.status}
+                    onChange={(e) => setCurrentProject({ ...currentProject, status: e.target.value })}
+                    className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="On Track">On Track</option>
+                    <option value="At Risk">At Risk</option>
+                    <option value="Delayed">Delayed</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 pt-4 border-t">
+                <button 
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="px-4 py-2 border rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Batal
+                </button>
+                <button 
+                  type="submit"
+                  className="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Simpan Perubahan</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

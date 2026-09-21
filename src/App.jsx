@@ -5,6 +5,10 @@ import ProjectPage from './pages/ProjectPage';
 import MonitoringPage from './pages/MonitoringPage';
 import RekapitulasiPage from './pages/RekapitulasiPage';
 
+// Import Toastify dan CSS-nya
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
 
@@ -24,6 +28,20 @@ export default function App() {
       <main className="flex-1 overflow-y-auto p-8">
         {renderPage()}
       </main>
+
+      {/* Komponen ToastContainer diletakkan di sini agar muncul di pojok kanan bawah secara global */}
+      <ToastContainer 
+        position="bottom-right" 
+        autoClose={3000} 
+        hideProgressBar={false} 
+        newestOnTop={false} 
+        closeOnClick 
+        rtl={false} 
+        pauseOnFocusLoss 
+        draggable 
+        pauseOnHover 
+        theme="colored" 
+      />
     </div>
   );
 }
