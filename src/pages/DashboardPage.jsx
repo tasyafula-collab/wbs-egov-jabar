@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { FileText, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+// Tambahkan LayoutGrid pada import di bawah ini
+import { FileText, CheckCircle2, AlertTriangle, Clock, LayoutGrid } from 'lucide-react';
 
 export default function DashboardPage() {
   // 1. State untuk menyimpan data dari database MySQL
@@ -39,7 +40,11 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Title Section */}
       <div>
-        <h2 className="text-xl font-bold text-gray-900">Dashboard</h2>
+        {/* Tambahan div flex agar ikon dan teks sejajar */}
+        <div className="flex items-center space-x-2">
+          <LayoutGrid className="w-6 h-6 text-blue-600" />
+          <h2 className="text-xl font-bold text-gray-900">Dashboard</h2>
+        </div>
         <p className="text-sm text-gray-500 mt-0.5">Ringkasan status project WBS e-Government</p>
       </div>
 

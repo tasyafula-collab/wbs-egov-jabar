@@ -1,5 +1,5 @@
-import React from 'react';
 import { LayoutGrid, FileText, Activity, BarChart3 } from 'lucide-react';
+import diskominfo from '../assets/diskominfo.png';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
   const menuItems = [
@@ -12,16 +12,14 @@ export default function Sidebar({ activeTab, setActiveTab }) {
   return (
     <aside className="w-64 bg-[#0d1b2a] text-white flex flex-col h-screen shrink-0">
       {/* Top Brand Section */}
-      <div className="p-6 border-b border-gray-800">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-lg">
-            W
-          </div>
-          <div>
-            <h2 className="font-bold text-sm tracking-wide">WBS e-Gov</h2>
-            <p className="text-[11px] text-gray-400">Diskominfo Jabar</p>
-          </div>
-        </div>
+      {/* Jarak (padding) dikurangi dan dibuat mepet */}
+      <div className="py-2 px-1 border-b border-gray-800 flex items-center justify-center">
+        <img 
+          src={diskominfo} 
+          alt="Logo Diskominfo Jabar" 
+          /* Tinggi ditambah (h-24) dan di-zoom sedikit (scale-110) */
+          className="w-full h-24 object-contain scale-110" 
+        />
       </div>
 
       {/* Menu Navigation */}
